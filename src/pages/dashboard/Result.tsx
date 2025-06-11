@@ -12,7 +12,6 @@ const Result = () => {
     education: number;
     gen_hlth: number;
     high_bp: number;
-    // add other fields as needed
   };
   const [results, setResults] = useState<CheckResult[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
