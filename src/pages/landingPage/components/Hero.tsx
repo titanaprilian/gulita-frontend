@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import CheckBloodImage from "@/assets/check-blood.avif"; // Adjust the path as necessary
 
 const Hero = () => {
   return (
@@ -42,7 +43,7 @@ const Hero = () => {
         >
           <div className="relative w-96 h-96 md:w-[18rem] md:h-[18rem] lg:w-[24rem] lg:h-[24rem] xl:w-[28rem] xl:h-[28rem] flex items-center justify-center">
             <img
-              src="https://images.unsplash.com/photo-1685660375199-9b35cb7a6c22?q=80&w=1200&auto=format&fit=crop"
+              src={CheckBloodImage}
               alt="Diabetes awareness illustration"
               className="w-full h-full object-cover rounded-3xl shadow-2xl border-4 bg-white transition-transform duration-300"
             />

@@ -48,7 +48,8 @@ const DiabetesTest = () => {
     const floatForm = Object.fromEntries(Object.entries(form).map(([key, value]) => [key, parseFloat(value)]));
 
     try {
-      const response = await fetch("http://localhost:3000/api/v1/checks", {
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const response = await fetch(`${apiBaseUrl}/checks`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(floatForm),

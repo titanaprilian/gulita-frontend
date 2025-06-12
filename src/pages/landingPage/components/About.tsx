@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { CheckCircle2 } from "lucide-react";
+import stethoscopeImg from "@/assets/stetoscope.avif";
 
 const About = () => {
   return (
@@ -17,7 +18,7 @@ const About = () => {
           transition={{ duration: 0.6, ease: "easeOut" }}
         >
           <img
-            src="https://images.unsplash.com/photo-1505751172876-fa1923c5c528?auto=format&fit=crop&w=400&q=80"
+            src={stethoscopeImg}
             alt="Teamwork for health"
             className="w-64 h-64 md:w-80 md:h-80 object-cover rounded-2xl shadow-xl border-4 border-white bg-white"
           />
