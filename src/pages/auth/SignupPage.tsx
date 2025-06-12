@@ -1,5 +1,5 @@
 import { useForm } from "react-hook-form";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion } from "framer-motion";
@@ -12,6 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import BackToHomeButton from "@/components/ui/BackToHomeButton";
+import { useAuth } from "@/hooks/useAuth";
 
 // Zod schema for validation, including password confirmation
 const formSchema = z
@@ -27,7 +28,7 @@ const formSchema = z
   });
 
 const SignupPage = () => {
-  const navigate = useNavigate();
+  const { register } = useAuth();
 
   // Define the form using react-hook-form
   const form = useForm<z.infer<typeof formSchema>>({
@@ -46,26 +47,7 @@ const SignupPage = () => {
   // Define the submit handler
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      const payload = {
-        username: values.username,
-        email: values.email,
-        password: values.password,
-      };
-
-      const response = await fetch("http://localhost:3000/api/v1/users/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const responseData = await response.json();
-
-      if (!response.ok) {
-        throw new Error(responseData.message || "Registration failed. Please try again.");
-      }
-
-      // On success, navigate to login with a success message flag
-      navigate("/login", { state: { signupSuccess: true } });
+      await register(values);
     } catch (error: unknown) {
       if (error instanceof Error) {
         form.setError("root", {

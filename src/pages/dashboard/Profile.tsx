@@ -1,98 +1,189 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+// src/pages/dashboard/Profile.tsx
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { toast } from "sonner"; // Import the toaster
+import { Loader2, AlertCircle, Edit, Save } from "lucide-react";
+
+// shadcn/ui components
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-const initialProfile = {
-  name: "John Doe",
-  email: "john.doe@email.com",
-  ageGroup: "41-49",
-};
+// Custom hook for data fetching
+import { useUserProfile } from "./hooks/useDashboardData";
+import { apiClient } from "@/lib/api";
 
-const ageGroups = ["Below 40", "41-49", "50-59", "60 or older"];
+// Zod schema for form validation
+const profileSchema = z.object({
+  username: z.string().min(3, { message: "Username must be at least 3 characters." }),
+  email: z.string().email({ message: "Please enter a valid email." }),
+});
 
 const ProfilePage = () => {
-  const [profile, setProfile] = useState(initialProfile);
-  const [editing, setEditing] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const { profile, isLoading: isProfileLoading, error: profileError } = useUserProfile();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setProfile({ ...profile, [e.target.name]: e.target.value });
-    setSaved(false);
-  };
+  const form = useForm<z.infer<typeof profileSchema>>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: { username: "", email: "" },
+  });
 
-  const handleEdit = () => setEditing(true);
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    setEditing(false);
-    setSaved(true);
-  };
+  const { isSubmitting } = form.formState;
+
+  // Populate the form with fetched data once it's available
+  useEffect(() => {
+    if (profile) {
+      form.reset({
+        username: profile.username,
+        email: profile.email,
+      });
+    }
+  }, [profile, form]);
+
+  // Handle form submission to update the profile
+  async function onSubmit(values: z.infer<typeof profileSchema>) {
+    try {
+      const response = await apiClient.put("/users/profile", values);
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (errorData.message === "Validation failed") {
+          form.setError("root", { message: "Username must only contain alphanumeric characters." });
+          return;
+        }
+        throw new Error(errorData.message || "Failed to update profile.");
+      }
+
+      toast.success("Profile updated successfully!");
+      setIsEditing(false);
+      // Optionally, you might want to refetch the profile data here
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.log(error.message);
+        form.setError("root", { message: error.message });
+      } else {
+        form.setError("root", { message: "An unknown error occurred." });
+      }
+    }
+  }
+
+  if (isProfileLoading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <Skeleton className="h-8 w-32" />
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+            <Skeleton className="h-10 w-full mt-4" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (profileError) {
+    return (
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>{profileError}</AlertDescription>
+      </Alert>
+    );
+  }
 
   return (
-    <div className="py-10 px-4 flex justify-center items-start">
-      <Card className="w-full max-w-md shadow-xl">
+    <div className="h-full flex flex-col justify-center">
+      <Card className="w-full max-w-md shadow-lg mx-auto">
         <CardHeader>
-          <CardTitle className="text-blue-700 text-2xl">Profile</CardTitle>
+          <CardTitle className="text-2xl">Your Profile</CardTitle>
+          <CardDescription>View and edit your personal information.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSave} className="flex flex-col gap-5">
-            <div>
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                name="name"
-                value={profile.name}
-                onChange={handleChange}
-                disabled={!editing}
-                className="mt-1"
-                required
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              {form.formState.errors.root && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Update Failed</AlertTitle>
+                  <AlertDescription>{form.formState.errors.root.message}</AlertDescription>
+                </Alert>
+              )}
+
+              <FormField
+                control={form.control}
+                name="username"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Username</FormLabel>
+                    <FormControl>
+                      <Input {...field} disabled={!isEditing || isSubmitting} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
+              <FormField
+                control={form.control}
                 name="email"
-                type="email"
-                value={profile.email}
-                onChange={handleChange}
-                disabled={!editing}
-                className="mt-1"
-                required
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        disabled // Email is typically not editable
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div>
-              <Label htmlFor="ageGroup">Age Group</Label>
-              <select
-                id="ageGroup"
-                name="ageGroup"
-                value={profile.ageGroup}
-                onChange={handleChange}
-                disabled={!editing}
-                className="mt-1 w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
-                required
-              >
-                {ageGroups.map((group) => (
-                  <option key={group} value={group}>
-                    {group}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex gap-3 mt-2">
-              {editing ? (
-                <Button type="submit" className="w-full">
-                  Save Changes
-                </Button>
+
+              {isEditing ? (
+                <div className="flex gap-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setIsEditing(false);
+                      if (profile) {
+                        form.reset({ username: profile.username, email: profile.email });
+                      }
+                    }}
+                    disabled={isSubmitting}
+                  >
+                    Cancel
+                  </Button>
+                  <Button variant="primary" type="submit" className="flex-1" disabled={isSubmitting}>
+                    {isSubmitting ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="mr-2 h-4 w-4" />
+                    )}
+                    Save Changes
+                  </Button>
+                </div>
               ) : (
-                <Button type="button" variant="outline" className="w-full" onClick={handleEdit}>
+                <Button type="button" variant="primary" onClick={() => setIsEditing(true)}>
+                  <Edit className="mr-2 h-4 w-4" />
                   Edit Profile
                 </Button>
               )}
-            </div>
-            {saved && <div className="text-green-600 text-sm text-center">Profile updated!</div>}
-          </form>
+            </form>
+          </Form>
         </CardContent>
       </Card>
     </div>

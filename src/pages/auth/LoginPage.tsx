@@ -1,5 +1,5 @@
 import { useForm } from "react-hook-form";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion } from "framer-motion";
@@ -12,6 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import BackToHomeButton from "@/components/ui/BackToHomeButton";
+import { useAuth } from "@/hooks/useAuth";
 
 // Zod schema for form validation
 const formSchema = z.object({
@@ -20,7 +21,7 @@ const formSchema = z.object({
 });
 
 const LoginPage = () => {
-  const navigate = useNavigate();
+  const { login } = useAuth();
   const location = useLocation();
   const signupSuccess = location.state?.signupSuccess;
 
@@ -36,21 +37,7 @@ const LoginPage = () => {
   // Define the submit handler
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      const response = await fetch("http://localhost:3000/api/v1/users/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
-      });
-
-      const responseData = await response.json();
-
-      if (!response.ok) {
-        throw new Error(responseData.message || "Login failed. Please check your credentials.");
-      }
-
-      localStorage.setItem("accessToken", responseData.data.token.accessToken);
-      sessionStorage.setItem("refreshToken", responseData.data.token.refreshToken);
-      navigate("/dashboard");
+      await login(values);
     } catch (error: unknown) {
       if (error instanceof Error) {
         form.setError("root", {

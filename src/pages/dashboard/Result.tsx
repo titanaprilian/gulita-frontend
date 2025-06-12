@@ -1,135 +1,137 @@
-import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { useCheckHistory, type CheckHistoryItem } from "./hooks/useDashboardData";
+import { formatCheckDetails } from "./utils/formatters"; // Import our new utility
 
+// shadcn/ui components
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { AlertCircle, FileText, PlusCircle } from "lucide-react";
+import { Card } from "@/components/ui/card";
+
+// A dedicated component for the empty state
+const NoResultsState = () => (
+  <div className="text-center p-10 bg-slate-50 rounded-lg border-2 border-dashed">
+    <FileText className="mx-auto h-12 w-12 text-slate-400" />
+    <h3 className="mt-4 text-lg font-semibold">No Results Found</h3>
+    <p className="mt-1 text-sm text-muted-foreground">
+      You haven't taken any tests yet. Take one to see your results here.
+    </p>
+    <Button asChild className="mt-6">
+      <Link to="/dashboard/check">
+        <PlusCircle className="mr-2 h-4 w-4" /> Take New Test
+      </Link>
+    </Button>
+  </div>
+);
+
+// A dedicated component for the loading state
+const LoadingState = () => (
+  <div className="space-y-4 ">
+    <div className="bg-white px-4 py-6 rounded-lg shadow-sm">
+      <Skeleton className="h-20 w-full" />
+    </div>
+    <div className="bg-white px-4 py-6 rounded-lg shadow-sm">
+      <Skeleton className="h-20 w-full" />
+    </div>
+    <div className="bg-white px-4 py-6 rounded-lg shadow-sm">
+      <Skeleton className="h-20 w-full" />
+    </div>
+    <div className="bg-white px-4 py-6 rounded-lg shadow-sm">
+      <Skeleton className="h-20 w-full" />
+    </div>
+    <div className="bg-white px-4 py-6 rounded-lg shadow-sm">
+      <Skeleton className="h-20 w-full" />
+    </div>
+  </div>
+);
+
+// The main component
 const Result = () => {
-  type CheckResult = {
-    id: string;
-    created_at: string;
-    diabetes_result: number;
-    bmi: number;
-    age: number;
-    income: number;
-    phys_hlth: number;
-    education: number;
-    gen_hlth: number;
-    high_bp: number;
-  };
-  const [results, setResults] = useState<CheckResult[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const { history, isLoading, error } = useCheckHistory();
 
-  useEffect(() => {
-    const fetchResults = async () => {
-      const accessToken = localStorage.getItem("accessToken");
-      if (!accessToken) return setLoading(false);
-      try {
-        const response = await fetch("http://localhost:3000/api/v1/users/checks", {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        if (!response.ok) return setLoading(false);
-        const data = await response.json();
-        if (data.status === "success" && data.data && Array.isArray(data.data.history)) {
-          setResults(data.data.history);
-        }
-      } catch {
-        // ignore error
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchResults();
-  }, []);
-
-  // Helper maps for value-to-label conversion
-  const ageMap: Record<string | number, string> = {
-    3: "Below 40",
-    5: "41-49",
-    7: "50-59",
-    9: "60 or older",
-  };
-  const incomeMap: Record<string | number, string> = {
-    1: "Below 5 million IDR",
-    3: "10-20 million IDR",
-    5: "20-50 million IDR",
-    7: "50-100 million IDR",
-    8: "Above 100 million IDR",
-  };
-  const physHlthMap: Record<string | number, string> = {
-    0: "Not at all",
-    7: "1-2 days",
-    15: "7-14 days",
-    30: "More than 14 days",
-  };
-  const highBP: Record<string | number, string> = {
-    0: "No",
-    1: "Yes",
-  };
-  const educationMap: Record<string | number, string> = {
-    3: "Elementary School",
-    4: "Junior High School",
-    5: "Senior High School",
-    6: "College",
-  };
-  const genHlthMap: Record<string | number, string> = {
-    1: "1",
-    2: "2",
-    3: "3",
-    4: "4",
-    5: "5",
-  };
+  if (error) {
+    return (
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
+    );
+  }
 
   return (
-    <div className="py-10 px-4">
-      <h2 className="text-3xl font-bold text-blue-700 mb-4">Results</h2>
-      <p className="text-lg text-gray-700 mb-6">View your diabetes test results here.</p>
-      <div className="space-y-6">
-        {loading ? (
-          <div className="bg-blue-50 rounded-xl p-6 shadow text-center text-gray-500">Loading...</div>
-        ) : results.length === 0 ? (
-          <div className="bg-blue-50 rounded-xl p-6 shadow text-center text-gray-500">
-            No results found. Take a diabetes test to see your results here.
-          </div>
-        ) : (
-          results.map((result) => (
-            <div
-              key={result.id}
-              className="bg-white rounded-xl shadow p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4"
-            >
-              <div className="flex-1">
-                <div className="text-sm text-gray-500 mb-1">
-                  Test Date: {new Date(result.created_at).toLocaleDateString()}
-                </div>
-                <div className="text-lg font-semibold text-blue-700 mb-2">
-                  Risk: {result.diabetes_result === 1 ? "High" : result.diabetes_result === 0 ? "Low" : "Unknown"}
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1 text-gray-700 text-sm">
-                  <div>
-                    <span className="font-medium">BMI:</span> {result.bmi}
-                  </div>
-                  <div>
-                    <span className="font-medium">Age Group:</span> {ageMap[result.age] || result.age}
-                  </div>
-                  <div>
-                    <span className="font-medium">Income:</span> {incomeMap[result.income] || result.income}
-                  </div>
-                  <div>
-                    <span className="font-medium">Past 30 days you feel physically ill</span>{" "}
-                    {physHlthMap[result.phys_hlth] || result.phys_hlth}
-                  </div>
-                  <div>
-                    <span className="font-medium">Education:</span> {educationMap[result.education] || result.education}
-                  </div>
-                  <div>
-                    <span className="font-medium">General Health:</span>{" "}
-                    {genHlthMap[result.gen_hlth] || result.gen_hlth}
-                  </div>
-                  <div>
-                    <span className="font-medium">High Blood Pressure:</span> {highBP[result.high_bp] || result.high_bp}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))
-        )}
+    <div className="space-y-6 px-6 py-4">
+      <div>
+        <h2 className="text-3xl font-bold tracking-tight">Your Health History</h2>
+        <p className="text-muted-foreground">Review the results from all your past health checks.</p>
       </div>
+
+      {isLoading ? (
+        <LoadingState />
+      ) : history.length === 0 ? (
+        <NoResultsState />
+      ) : (
+        <Accordion type="single" collapsible className="w-full space-y-4">
+          {history.map((result: CheckHistoryItem, index: number) => {
+            const details = formatCheckDetails(result);
+            const isHighRisk = result.diabetes_result === 1;
+
+            return (
+              <AccordionItem value={`item-${index}`} key={result.id} className="border-b-0">
+                <Card className="shadow-sm">
+                  <AccordionTrigger className="w-full px-6 py-4 text-left hover:no-underline">
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex flex-col items-start">
+                        <span className="font-semibold text-lg">
+                          Test from{" "}
+                          {new Date(result.created_at).toLocaleDateString("en-GB", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          })}
+                        </span>
+                        <span className="text-sm text-muted-foreground">Click to see details</span>
+                      </div>
+                      <Badge variant={isHighRisk ? "destructive" : "default"} className="text-sm">
+                        {isHighRisk ? "High Risk" : "Low Risk"}
+                      </Badge>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-6 pb-6">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-8 gap-y-4 pt-4 border-t">
+                      <p>
+                        <span className="font-semibold text-muted-foreground">BMI:</span> {result.bmi}
+                      </p>
+                      <p>
+                        <span className="font-semibold text-muted-foreground">Age Group:</span> {details.age}
+                      </p>
+                      <p>
+                        <span className="font-semibold text-muted-foreground">High BP:</span> {details.high_bp}
+                      </p>
+                      <p>
+                        <span className="font-semibold text-muted-foreground">General Health:</span> {details.gen_hlth}
+                      </p>
+                      <p>
+                        <span className="font-semibold text-muted-foreground">Physical Health:</span>{" "}
+                        {details.phys_hlth}
+                      </p>
+                      <p>
+                        <span className="font-semibold text-muted-foreground">Education:</span> {details.education}
+                      </p>
+                      <p>
+                        <span className="font-semibold text-muted-foreground">Income:</span> {details.income}
+                      </p>
+                    </div>
+                  </AccordionContent>
+                </Card>
+              </AccordionItem>
+            );
+          })}
+        </Accordion>
+      )}
     </div>
   );
 };
